@@ -2686,4 +2686,5 @@ export default function ChessGamePage() {
       <ChessGameContent />
     </Suspense>
   );
+  
 }
