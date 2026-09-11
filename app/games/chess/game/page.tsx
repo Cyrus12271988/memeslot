@@ -2668,7 +2668,7 @@ function ChessGameContent() {
 // ============================================================
 // DEFAULT EXPORT WRAPPED IN SUSPENSE
 // ============================================================
-
+ 
 export default function ChessGamePage() {
   return ( 
     <Suspense
