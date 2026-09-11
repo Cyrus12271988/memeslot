@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  Suspense,
 } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -78,7 +79,6 @@ type ActiveMatch = {
 
   time_control_minutes?: number | null;
 
-  // Optional in case your API includes check in the match response.
   check?: boolean;
 };
 
@@ -457,10 +457,10 @@ function shortWallet(
 }
 
 // ============================================================
-// MAIN PAGE
+// CONTENT COMPONENT
 // ============================================================
 
-export default function ChessGamePage() {
+function ChessGameContent() {
   const router = useRouter();
 
   const searchParams =
@@ -537,16 +537,6 @@ export default function ChessGamePage() {
     useRef<AudioContext | null>(
       null
     );
-
-  // Prevent duplicate move sounds
-  // when local state and polling both
-  // observe the same move.
-  const lastSoundMoveCountRef =
-    useRef(0);
-
-  // ==========================================================
-  // CHESS SOUND ENGINE
-  // ==========================================================
 
   const getAudioContext =
     useCallback(() => {
@@ -1288,10 +1278,6 @@ export default function ChessGamePage() {
     playChessSound,
   ]);
 
-  // ==========================================================
-  // LAST MOVE SQUARE
-  // ==========================================================
-
   const isLastMoveSquare =
     (square: string) => {
       if (!lastMove) {
@@ -1304,10 +1290,6 @@ export default function ChessGamePage() {
         lastMove.to === square
       );
     };
-
-  // ==========================================================
-  // SUBMIT MOVE
-  // ==========================================================
 
   const submitMove = async (
     from: string,
@@ -1374,17 +1356,9 @@ export default function ChessGamePage() {
         );
       }
 
-      // ======================================================
-      // CHECK STATE
-      // ======================================================
-
       setIsInCheck(
         data.check === true
       );
-
-      // ======================================================
-      // MOVE SOUND
-      // ======================================================
 
       if (
         data.checkmate ||
@@ -1514,10 +1488,6 @@ export default function ChessGamePage() {
     }
   };
 
-  // ==========================================================
-  // SQUARE CLICK
-  // ==========================================================
-
   const handleSquareClick =
     (square: string) => {
       if (
@@ -1549,10 +1519,6 @@ export default function ChessGamePage() {
         board[row]?.[col] ??
         null;
 
-      // ======================================================
-      // SELECT PIECE
-      // ======================================================
-
       if (!selectedSquare) {
         if (
           piece?.color ===
@@ -1567,10 +1533,6 @@ export default function ChessGamePage() {
 
         return;
       }
-
-      // ======================================================
-      // DESELECT
-      // ======================================================
 
       if (
         selectedSquare ===
@@ -1587,10 +1549,6 @@ export default function ChessGamePage() {
         return;
       }
 
-      // ======================================================
-      // SELECT ANOTHER OWN PIECE
-      // ======================================================
-
       if (
         piece?.color ===
         playerColor
@@ -1605,10 +1563,6 @@ export default function ChessGamePage() {
 
         return;
       }
-
-      // ======================================================
-      // FIND SELECTED PIECE
-      // ======================================================
 
       const selectedPosition =
         squareToPosition(
@@ -1629,10 +1583,6 @@ export default function ChessGamePage() {
 
         return;
       }
-
-      // ======================================================
-      // PROMOTION
-      // ======================================================
 
       if (
         selected.type ===
@@ -1661,20 +1611,12 @@ export default function ChessGamePage() {
         }
       }
 
-      // ======================================================
-      // SUBMIT MOVE
-      // ======================================================
-
       submitMove(
         selectedSquare,
         square,
         "q"
       );
     };
-
-  // ==========================================================
-  // PROMOTION
-  // ==========================================================
 
   const choosePromotion =
     (
@@ -1697,10 +1639,6 @@ export default function ChessGamePage() {
         piece
       );
     };
-
-  // ==========================================================
-  // RESIGN
-  // ==========================================================
 
   const resign = async () => {
     if (
@@ -1826,10 +1764,6 @@ export default function ChessGamePage() {
     }
   };
 
-  // ==========================================================
-  // RETRY SETTLEMENT
-  // ==========================================================
-
   const retrySettlement =
     async () => {
       if (
@@ -1922,10 +1856,6 @@ export default function ChessGamePage() {
       }
     };
 
-  // ==========================================================
-  // RESULT
-  // ==========================================================
-
   const resultText =
     useMemo(() => {
       if (
@@ -1964,10 +1894,6 @@ export default function ChessGamePage() {
       walletAddress,
     ]);
 
-  // ==========================================================
-  // LOADING
-  // ==========================================================
-
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 text-white">
@@ -1983,10 +1909,6 @@ export default function ChessGamePage() {
       </main>
     );
   }
-
-  // ==========================================================
-  // NO MATCH
-  // ==========================================================
 
   if (!match) {
     return (
@@ -2021,10 +1943,6 @@ export default function ChessGamePage() {
     );
   }
 
-  // ==========================================================
-  // PLAYER COLORS
-  // ==========================================================
-
   const whiteWallet =
     match.player_1_color
       .toLowerCase()
@@ -2048,10 +1966,6 @@ export default function ChessGamePage() {
     currentTurn === "b" &&
     match.status ===
       "PLAYING";
-
-  // ==========================================================
-  // PLAYER PERSPECTIVE
-  // ==========================================================
 
   const myColor =
     playerColor ?? "w";
@@ -2101,17 +2015,11 @@ export default function ChessGamePage() {
       ? "WHITE"
       : "BLACK";
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
-
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto max-w-7xl px-2 py-2 sm:px-3 sm:py-3 lg:px-5">
 
-        {/* ====================================================
-            HEADER
-        ==================================================== */}
+        {/* HEADER */}
 
         <header className="mb-2 rounded-xl border border-slate-800 bg-slate-900/80 p-2 shadow-xl backdrop-blur sm:p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2129,17 +2037,18 @@ export default function ChessGamePage() {
 
               Chess Lobby
             </button>
-{/* COPY CONTRACT ADDRESS */}
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(
-          "FhgGyS6mC4ZFd2KG5hJLGbiz7skgBaL7fkg2J79upump"
-        );
-      }}
-      className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-800/90 text-slate-300 hover:text-amber-400 text-xs font-bold rounded-xl border border-slate-700/60 shadow-md transition-all active:scale-95"
-    >
-      📋 Copy CA
-    </button>
+
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  "FhgGyS6mC4ZFd2KG5hJLGbiz7skgBaL7fkg2J79upump"
+                );
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-800/90 text-slate-300 hover:text-amber-400 text-xs font-bold rounded-xl border border-slate-700/60 shadow-md transition-all active:scale-95"
+            >
+              📋 Copy CA
+            </button>
+
             <div className="text-center">
               <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600">
                 Chess Match
@@ -2173,19 +2082,11 @@ export default function ChessGamePage() {
           </div>
         </header>
 
-        {/* ====================================================
-            ERROR
-        ==================================================== */}
-
         {error ? (
           <div className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300">
             {error}
           </div>
         ) : null}
-
-        {/* ====================================================
-            MESSAGE
-        ==================================================== */}
 
         {message ? (
           <div
@@ -2199,10 +2100,6 @@ export default function ChessGamePage() {
           </div>
         ) : null}
 
-        {/* ====================================================
-            CHECK BANNER
-        ==================================================== */}
-
         {isInCheck &&
         match.status ===
           "PLAYING" ? (
@@ -2213,24 +2110,9 @@ export default function ChessGamePage() {
           </div>
         ) : null}
 
-        {/* ====================================================
-            MAIN GRID
-        ==================================================== */}
-
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
 
-          {/* ==================================================
-              BOARD SECTION
-          ================================================== */}
-
           <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 shadow-2xl sm:p-3">
-
-            {/* =================================================
-                OPPONENT CLOCK
-
-                IMPORTANT:
-                TOP = ALWAYS OPPONENT
-            ================================================= */}
 
             <div
               className={`mx-auto mb-2 flex w-full max-w-[min(68vh,680px)] items-center justify-between rounded-xl border px-3 py-2 ${
@@ -2283,10 +2165,6 @@ export default function ChessGamePage() {
                 )}
               </div>
             </div>
-
-            {/* =================================================
-                CHESS BOARD
-            ================================================= */}
 
             <div className="mx-auto w-full max-w-[min(68vh,680px)] overflow-hidden rounded-xl border border-slate-700 bg-slate-950 shadow-2xl">
               <div className="grid grid-cols-8">
@@ -2361,8 +2239,6 @@ export default function ChessGamePage() {
                         }`}
                       >
 
-                        {/* RANK */}
-
                         {showRank ? (
                           <span
                             className={`absolute left-1 top-1 text-[8px] font-black ${
@@ -2375,8 +2251,6 @@ export default function ChessGamePage() {
                           </span>
                         ) : null}
 
-                        {/* FILE */}
-
                         {showFile ? (
                           <span
                             className={`absolute bottom-1 right-1 text-[8px] font-black ${
@@ -2388,8 +2262,6 @@ export default function ChessGamePage() {
                             {file}
                           </span>
                         ) : null}
-
-                        {/* PIECE */}
 
                         {piece ? (
                           <span
@@ -2412,8 +2284,6 @@ export default function ChessGamePage() {
                           </span>
                         ) : null}
 
-                        {/* SELECTED INDICATOR */}
-
                         {selected ? (
                           <span className="absolute inset-0 z-0 m-auto h-3 w-3 rounded-full bg-amber-400/70 sm:h-4 sm:w-4" />
                         ) : null}
@@ -2425,13 +2295,6 @@ export default function ChessGamePage() {
 
               </div>
             </div>
-
-            {/* =================================================
-                YOUR CLOCK
-
-                IMPORTANT:
-                BOTTOM = ALWAYS YOU
-            ================================================= */}
 
             <div
               className={`mx-auto mt-2 flex w-full max-w-[min(68vh,680px)] items-center justify-between rounded-xl border px-3 py-2 ${
@@ -2484,10 +2347,6 @@ export default function ChessGamePage() {
               </div>
             </div>
 
-            {/* =================================================
-                BOARD STATUS
-            ================================================= */}
-
             <div className="mx-auto mt-2 flex w-full max-w-[min(68vh,680px)] flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950 p-2">
 
               <div className="text-[11px] text-slate-400">
@@ -2508,8 +2367,6 @@ export default function ChessGamePage() {
                   </span>
                 )}
               </div>
-
-              {/* RESIGN */}
 
               <button
                 type="button"
@@ -2539,15 +2396,7 @@ export default function ChessGamePage() {
             </div>
           </section>
 
-          {/* ====================================================
-              SIDEBAR
-          ==================================================== */}
-
           <aside className="space-y-3">
-
-            {/* =================================================
-                MATCH STATUS
-            ================================================= */}
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
 
@@ -2561,8 +2410,6 @@ export default function ChessGamePage() {
 
               <div className="mt-3 space-y-1.5 text-xs">
 
-                {/* TIME CONTROL */}
-
                 <div className="flex justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
                   <span className="text-slate-500">
                     Time control
@@ -2574,8 +2421,6 @@ export default function ChessGamePage() {
                     MIN
                   </span>
                 </div>
-
-                {/* POT */}
 
                 <div className="flex justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
                   <span className="text-slate-500">
@@ -2589,8 +2434,6 @@ export default function ChessGamePage() {
                   </span>
                 </div>
 
-                {/* MOVES */}
-
                 <div className="flex justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
                   <span className="text-slate-500">
                     Moves
@@ -2602,8 +2445,6 @@ export default function ChessGamePage() {
                     }
                   </span>
                 </div>
-
-                {/* SETTLEMENT */}
 
                 <div className="flex justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
                   <span className="text-slate-500">
@@ -2625,10 +2466,6 @@ export default function ChessGamePage() {
 
               </div>
             </section>
-
-            {/* =================================================
-                RESULT
-            ================================================= */}
 
             {match.status !==
             "PLAYING" ? (
@@ -2668,10 +2505,6 @@ export default function ChessGamePage() {
 
               </section>
             ) : null}
-
-            {/* =================================================
-                MOVE HISTORY
-            ================================================= */}
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
 
@@ -2737,10 +2570,6 @@ export default function ChessGamePage() {
               </div>
             </section>
 
-            {/* =================================================
-                SERVER AUTHORITATIVE
-            ================================================= */}
-
             <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-3 text-[10px] text-slate-500">
 
               <div className="font-bold text-slate-300">
@@ -2763,10 +2592,6 @@ export default function ChessGamePage() {
             </section>
           </aside>
         </div>
-
-        {/* ======================================================
-            PROMOTION MODAL
-        ====================================================== */}
 
         {promotionSquare ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -2837,5 +2662,28 @@ export default function ChessGamePage() {
         ) : null}
       </div>
     </main>
+  );
+}
+
+// ============================================================
+// DEFAULT EXPORT WRAPPED IN SUSPENSE
+// ============================================================
+
+export default function ChessGamePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-950 text-white">
+          <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4">
+            <div className="flex items-center gap-3 text-slate-400">
+              <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
+              <span className="font-semibold">Loading Chess match...</span>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <ChessGameContent />
+    </Suspense>
   );
 }
