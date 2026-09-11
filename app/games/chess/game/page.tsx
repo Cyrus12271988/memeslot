@@ -2670,7 +2670,7 @@ function ChessGameContent() {
 // ============================================================
 
 export default function ChessGamePage() {
-  return (
+  return ( 
     <Suspense
       fallback={
         <main className="min-h-screen bg-slate-950 text-white">
@@ -2686,5 +2686,5 @@ export default function ChessGamePage() {
       <ChessGameContent />
     </Suspense>
   );
-  
+
 }
