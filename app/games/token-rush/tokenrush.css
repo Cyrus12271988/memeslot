@@ -1,0 +1,49 @@
+/* ==============================
+   TOKEN RUSH WIN EFFECTS
+============================== */
+.tv-candle{
+
+opacity:0;
+
+animation:
+growCandle .3s forwards;
+
+}
+
+.tv-body{
+
+fill:#22c55e;
+
+filter:
+drop-shadow(0 0 5px #22c55e)
+drop-shadow(0 0 12px #22c55e);
+
+}
+
+.tv-wick{
+
+stroke:#7dffb2;
+
+stroke-width:2;
+
+}
+
+@keyframes growCandle{
+
+0%{
+
+opacity:0;
+
+transform:scale(.2);
+
+}
+
+100%{
+
+opacity:1;
+
+transform:scale(1);
+
+}
+
+}
