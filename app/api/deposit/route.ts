@@ -6,29 +6,26 @@ import { acquireLock, releaseLock } from "@/utils/lock";
 
 const HOUSE_WALLET = new PublicKey("9iNGzgH4GYyrncTmRDdKJ5wcjJnrqtbiiMAJxdJxx2W2");
 const TOKEN_CA = new PublicKey("FhgGyS6mC4ZFd2KG5hJLGbiz7skgBaL7fkg2J79upump");
-const TOKEN_DECIMALS = 6;
+const TOKEN_DECIMALS = 6; // Pump.fun token standard decimals
 
 const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const connection = new Connection(SOLANA_RPC, "finalized");
 
-// INITIALIZE SUPABASE CLIENT (Secure server-side service role)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 1. ATOMIC SUPABASE HELPER (Prevents Race Conditions via DB RPC)
 async function updateDatabaseBalanceAndRecordDeposit(
   walletAddress: string, 
   signature: string, 
   amount: number
 ): Promise<number> {
-  // Step 1: Insert into deposits history using your exact table column 'signature'
   const { error: insertError } = await supabase.from("deposits").insert({
     wallet_address: walletAddress,
     currency: "SPL",
     amount: amount,
-    signature: signature, // Matches your column name visible in Supabase
+    signature: signature,
     status: "confirmed"
   });
 
@@ -39,7 +36,6 @@ async function updateDatabaseBalanceAndRecordDeposit(
     throw new Error(`Database insert error: ${insertError.message}`);
   }
 
-  // Step 2: Atomically increment user balance
   const { data: newBalance, error: rpcError } = await supabase.rpc('increment_balance', {
     row_wallet: walletAddress,
     inc_amount: amount
@@ -64,14 +60,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid deposit parameters" }, { status: 400 });
     }
 
-    // Acquire concurrency lock per user to prevent rapid-fire requests
     const acquired = await acquireLock(walletAddress);
     if (!acquired) {
       return NextResponse.json({ error: "Too many concurrent requests. Please try again." }, { status: 429 });
     }
 
     try {
-      // 2. FETCH TRANSACTION FROM SOLANA (Using 'finalized' commitment for financial safety)
       const tx = await connection.getParsedTransaction(signature, {
         maxSupportedTransactionVersion: 0,
         commitment: "finalized",
@@ -86,7 +80,6 @@ export async function POST(request: Request) {
 
       let verifiedAmount = 0;
 
-      // Recursive / structural instruction parser for top-level and inner instructions
       const processInstructions = (instructionsList: any[]) => {
         for (const inst of instructionsList) {
           if (!inst) continue;
@@ -96,7 +89,8 @@ export async function POST(request: Request) {
             const type = inst.parsed.type;
 
             if (type === "transferChecked" || type === "transfer") {
-              const isCorrectMint = info.mint ? info.mint === TOKEN_CA.toBase58() : true;
+              const tokenMint = info.mint || TOKEN_CA.toBase58();
+              const isCorrectMint = tokenMint === TOKEN_CA.toBase58();
               const isDestinationHouse = info.destination === houseATAPubkeyStr;
               const isSenderUser = info.authority ? info.authority === walletAddress : true;
               const rawAmount = Number(info.tokenAmount?.amount || info.amount || 0);
@@ -126,7 +120,6 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
 
-      // 3. RECORD DEPOSIT & ATOMICALLY UPDATE BALANCE IN SUPABASE
       let newBalance: number;
       try {
         newBalance = await updateDatabaseBalanceAndRecordDeposit(walletAddress, signature, verifiedAmount);
